@@ -57,6 +57,7 @@ from cinder import utils
 import cinder.volume
 from cinder.volume import configuration as conf
 from cinder.volume import driver
+from cinder.volume.driver import ISCSIDriver
 from cinder.volume.drivers import lvm
 from cinder.volume.manager import VolumeManager
 from cinder.volume import rpcapi as volume_rpcapi
@@ -3258,3 +3259,40 @@ class VolumePolicyTestCase(test.TestCase):
         cinder.policy.enforce(self.context, 'volume:attach', target)
         self.mox.ReplayAll()
         cinder.volume.api.check_policy(self.context, 'attach', {'id': 2})
+
+
+class ISCSILocalTestCase(ISCSITestCase):
+    """Test Case for ISCSILocalDriver"""
+    driver_name = "cinder.volume.drivers.lvm.LVMISCSILocalDriver"
+    base_driver = driver.ISCSIDriver
+
+    def setUp(self):
+        super(ISCSILocalTestCase, self).setUp()
+        self.drv = lvm.LVMISCSILocalDriver(configuration=self.configuration,
+                                           host='localhost')
+
+    def test_initialize_connection(self):
+        TEST_VOLUME1 = {'host': 'localhost1',
+                        'provider_location': '1 2 3 /dev/loop1',
+                        }
+        TEST_CONNECTOR = {'host': 'localhost1'}
+        self.mox.StubOutWithMock(self.drv, 'local_path')
+        self.drv.local_path(TEST_VOLUME1).AndReturn('/dev/loop1')
+        self.mox.ReplayAll()
+        data = self.drv.initialize_connection(TEST_VOLUME1, TEST_CONNECTOR)
+        self.assertEqual(data, {
+            'driver_volume_type': 'local',
+            'data': {'device_path': '/dev/loop1'}
+        })
+
+    def test_initialize_connection_different_hosts(self):
+        TEST_CONNECTOR = {'host': 'localhost1'}
+        TEST_VOLUME2 = {'host': 'localhost2',
+                        'provider_location': '1 2 3 /dev/loop2',
+                        }
+        self.mox.StubOutWithMock(ISCSIDriver, 'initialize_connection')
+        ISCSIDriver.initialize_connection(TEST_VOLUME2,
+                                          TEST_CONNECTOR).AndReturn('data')
+        self.mox.ReplayAll()
+        data = self.drv.initialize_connection(TEST_VOLUME2, TEST_CONNECTOR)
+        self.assertEqual(data, 'data')

@@ -624,3 +624,19 @@ class LVMISERDriver(LVMISCSIDriver, driver.ISERDriver):
         self.backend_name =\
             self.configuration.safe_get('volume_backend_name') or 'LVM_iSER'
         self.protocol = 'iSER'
+
+
+class LVMISCSILocalDriver(LVMISCSIDriver):
+    """Works as LVMISCSIDriver, only mounts local volumes directly,
+       instead of via iSCSI
+    """
+
+    def initialize_connection(self, volume, connector):
+        if connector['host'] != volume['host']:
+                return super(LVMISCSIDriver, self). \
+                    initialize_connection(volume, connector)
+        else:
+            return {
+                'driver_volume_type': 'local',
+                'data': {'device_path': self.local_path(volume)},
+            }
