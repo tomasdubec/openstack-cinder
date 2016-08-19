@@ -773,3 +773,25 @@ class LVMVolumeDriver(driver.VolumeDriver):
     def terminate_connection(self, volume, connector, **kwargs):
         return self.target_driver.terminate_connection(volume, connector,
                                                        **kwargs)
+
+
+class LVMLocalVolumeDriver(LVMVolumeDriver):
+    """Behaves like driver.LVMVolumeDriver but
+
+    mounts local volumes directly
+    """
+
+    def initialize_connection(self, volume, connector):
+        # volume['host'] is something like 'hostname.domain.com@lvm#LVM'
+        if volume['host'].find('@') != -1:
+            vol_host = volume['host'][:volume['host'].find('@')]
+        else:
+            vol_host = volume['host']
+        if connector['host'] != vol_host:
+            return super(LVMLocalVolumeDriver, self). \
+                initialize_connection(volume, connector)
+        else:
+            return {
+                'driver_volume_type': 'local',
+                'data': {'device_path': self.local_path(volume)},
+            }

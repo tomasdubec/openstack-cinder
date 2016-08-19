@@ -7605,6 +7605,50 @@ class ISCSITestCase(DriverTestCase):
                           iscsi_driver.validate_connector, connector)
 
 
+class ISCSILocalTestCase(ISCSITestCase):
+    """Test Case for ISCSILocalDriver"""
+    driver_name = "cinder.volume.drivers.lvm.LVMLocalVolumeDriver"
+
+    def setUp(self):
+        super(ISCSILocalTestCase, self).setUp()
+        self.configuration = conf.Configuration(None)
+        self.configuration.iscsi_helper = 'tgtadm'
+        self.volume.driver = lvm.LVMLocalVolumeDriver(
+            configuration=self.configuration,
+            host='localhost', db=db)
+
+    def test_initialize_connection(self):
+        TEST_VOLUME1 = {'host': 'localhost1',
+                        'provider_location': '1 2 3 /dev/loop1',
+                        }
+        TEST_CONNECTOR = {'host': 'localhost1'}
+        self.mox.StubOutWithMock(self.volume.driver, 'local_path')
+        self.volume.driver.local_path(TEST_VOLUME1).AndReturn('/dev/loop1')
+        self.mox.ReplayAll()
+        data = self.volume.driver.initialize_connection(TEST_VOLUME1,
+                                                        TEST_CONNECTOR)
+        self.assertEqual(data, {
+            'driver_volume_type': 'local',
+            'data': {'device_path': '/dev/loop1'}
+        })
+
+    def test_initialize_connection_different_hosts(self):
+        TEST_CONNECTOR = {'host': 'localhost1'}
+        TEST_VOLUME2 = {'host': 'localhost2',
+                        'provider_location': '1 2 3 /dev/loop2',
+                        }
+        self.mox.StubOutWithMock(
+            cinder.volume.drivers.lvm.LVMLocalVolumeDriver,
+            'initialize_connection')
+        cinder.volume.drivers.lvm.LVMLocalVolumeDriver.initialize_connection(
+            TEST_VOLUME2,
+            TEST_CONNECTOR).AndReturn('data')
+        self.mox.ReplayAll()
+        data = self.volume.driver.initialize_connection(TEST_VOLUME2,
+                                                        TEST_CONNECTOR)
+        self.assertEqual(data, 'data')
+
+
 class FibreChannelTestCase(DriverTestCase):
     """Test Case for FibreChannelDriver."""
     driver_name = "cinder.volume.driver.FibreChannelDriver"
