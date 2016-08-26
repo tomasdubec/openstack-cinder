@@ -32,7 +32,7 @@ BuildRequires:    intltool
 BuildRequires:    python-d2to1
 BuildRequires:    python-oslo-sphinx
 BuildRequires:    python-pbr
-BuildRequires:    python-reno
+BuildRequires:    python2-reno
 BuildRequires:    python-sphinx
 BuildRequires:    python2-devel
 BuildRequires:    python-setuptools
